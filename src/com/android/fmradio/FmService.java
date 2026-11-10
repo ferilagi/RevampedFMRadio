@@ -320,6 +320,13 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                     return;
                 }
 
+                // MTK: tanpa kabel headset tidak ada antena, jadi FM yang sedang main
+                // dihentikan agar tidak mengeluarkan noise; UI menampilkan prompt
+                // pasang headset (perilaku FMRadio stok).
+                if (!isHeadSetIn() && isPlaying()) {
+                    powerDownAsync();
+                }
+
                 mIsSpeakerUsed = !isHeadSetIn();
 
                 // Avoid Service is killed,and receive headset plug in
@@ -411,7 +418,22 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
      * @return true, antenna available; false, antenna not available
      */
     public boolean isAntennaAvailable() {
-        return true; // force wireless
+        // MTK: kabel headset adalah antena FM. Tanpa headset tuner tetap bisa
+        // di-power up tetapi yang keluar hanya noise, jadi power up ditolak dan
+        // prompt pasang headset ditampilkan (paritas FMRadio stok).
+        AudioManager audioManager = (mAudioManager != null)
+                ? mAudioManager : (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            return false;
+        }
+        for (AudioDeviceInfo device : audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
+            final int type = device.getType();
+            if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                    || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setForceUse(boolean isSpeaker, boolean keepPreferredDeviceForMediaStrategy) {

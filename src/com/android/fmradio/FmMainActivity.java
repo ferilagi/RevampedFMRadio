@@ -302,6 +302,14 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
                     boolean isSpeakerMode = bundle.getBoolean(FmListener.KEY_IS_SPEAKER_MODE);
                     setMenuItemAudioIcon(isSpeakerMode);
                     refreshMenuItemAudio(!isSpeakerMode);
+                    // Headset (antena) lepas/pasang: samakan tampilan dengan kondisi antena.
+                    if (mNoHeadsetLayout != null) {
+                        if (mService != null && mService.isHeadSetIn()) {
+                            changeToMainLayout();
+                        } else {
+                            changeToNoHeadsetLayout();
+                        }
+                    }
                     break;
 
                 case FmListener.LISTEN_RECORDSTATE_CHANGED:
@@ -820,7 +828,21 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
      * @return true or false indicate antenna available or not
      */
     private boolean isAntennaAvailable() {
-        return true; // force wireless
+        // MTK: kabel headset adalah antena FM. Tanpa headset tuner tetap bisa
+        // "power up" tetapi yang keluar hanya noise, jadi power up ditolak dan
+        // prompt pasang headset ditampilkan (paritas FMRadio stok).
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            return false;
+        }
+        for (AudioDeviceInfo device : audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
+            final int type = device.getType();
+            if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                    || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -897,6 +919,16 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
      * Power up FM
      */
     private void powerUpFm() {
+        if (!isAntennaAvailable()) {
+            // Tidak ada antena (headset belum tertancap): cukup tampilkan prompt.
+            if (mNoHeadsetLayout != null) {
+                changeToNoHeadsetLayout();
+            }
+            return;
+        }
+        if (mNoHeadsetLayout != null && mNoHeadsetLayout.isShown()) {
+            changeToMainLayout();
+        }
         refreshImageButton(false);
         refreshActionMenuItem(false);
         refreshPopupMenuItem(false);
