@@ -101,7 +101,9 @@ int CUST_get_cfg(struct CUST_cfg_ds *cfg)
 
     cfg->chip = FM_CHIP_UNSUPPORTED;
     if (property_get("persist.vendor.connsys.fm_chipid", val, NULL)) {
-        if (strcmp(val, "soc") == 0) {
+        if (strcmp(val, "mt6631_6635") == 0) {
+            cfg->chip = FM_CHIP_MT6631;
+        } else if (strcmp(val, "soc") == 0) {
             cfg->chip = FM_CHIP_MT6580;
         } else if (strcmp(val, "mt6620") == 0) {
             cfg->chip = FM_CHIP_MT6620;
